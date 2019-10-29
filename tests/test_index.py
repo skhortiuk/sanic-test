@@ -1,6 +1,6 @@
 from sanic.testing import SanicTestClient
 
-from app import app
+from service_api.app import app
 
 
 class TestIndex:
@@ -13,7 +13,7 @@ class TestIndex:
     def test_get_with_username_should_return_200(self):
         request, response = self._test_client.get(
             '/',
-            headers={"username": "test"}
+            headers={"username": "tests"}
         )
         assert response.status == 200
 
@@ -24,14 +24,14 @@ class TestIndex:
     def test_post_with_username_and_without_data_should_return_404(self):
         request, response = self._test_client.post(
             '/',
-            headers={"username": "test"}
+            headers={"username": "tests"}
         )
         assert response.status == 404
 
     def test_post_with_username_and_with_data_should_return_200(self):
         request, response = self._test_client.post(
             '/',
-            headers={"username": "test"},
+            headers={"username": "tests"},
             json={"sample": "data"}
         )
         assert response.status == 200
@@ -43,14 +43,14 @@ class TestIndex:
     def test_delete_with_username_and_without_data_should_return_404(self):
         request, response = self._test_client.delete(
             '/',
-            headers={"username": "test"}
+            headers={"username": "tests"}
         )
         assert response.status == 404
 
     def test_delete_with_username_and_with_data_should_return_200(self):
         request, response = self._test_client.delete(
             '/',
-            headers={"username": "test"},
+            headers={"username": "tests"},
             json={"sample": "data"}
         )
         assert response.status == 200

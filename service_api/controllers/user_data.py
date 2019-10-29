@@ -1,40 +1,31 @@
-from sanic import Sanic
-from sanic.response import json
 from sanic.request import Request
+from sanic.response import json
 from sanic.views import HTTPMethodView
-from motor.motor_asyncio import AsyncIOMotorClient
+from sanic_openapi import doc
 
-import config
-from utils import username_required
-
-app = Sanic(__name__)
-app.config.from_object(config)
+from service_api.swagger import UsernameHeader
+from service_api.utils import username_required
 
 
-@app.middleware('response')
-async def ensure_headers(request, response):
-    response.headers["content-type"] = "application/json"
-
-
-@app.listener('before_server_start')
-def init(sanic: Sanic, loop):
-    cfg = sanic.config
-    sanic.db = AsyncIOMotorClient(cfg.DB_HOST, cfg.DB_PORT)[cfg.DB_NAME]
-
-
-class UserDataListView(HTTPMethodView):
+class UserDataView(HTTPMethodView):
+    @doc.summary("Returns all users documents")
+    @doc.consumes(UsernameHeader, location="header", required=True)
     @username_required()
     async def get(self, request: Request):
-        collection = app.db[request.headers["username"]]
+        collection = request.app.db[request.headers["username"]]
         docs = await collection.find().to_list(length=None)
-        for doc in docs:
-            doc['id'] = str(doc['_id'])
-            del doc['_id']
+        for document in docs:
+            document['id'] = str(document['_id'])
+            del document['_id']
         result = {
             "documents_count": docs
         }
         return json(result)
 
+    @doc.summary("Add new document(s) to user collection")
+    @doc.consumes(UsernameHeader, location="header", required=True)
+    @doc.consumes(doc.JsonBody(description="Any json data to store"),
+                  location="body", required=True)
     @username_required()
     async def post(self, request: Request):
         if not request.json:
@@ -47,10 +38,15 @@ class UserDataListView(HTTPMethodView):
                 status=404
             )
 
-        collection = app.db[request.headers["username"]]
+        collection = request.app.db[request.headers["username"]]
         result = await collection.insert_one(request.json)
         return json({"status": "OK", "record_id": str(result.inserted_id)})
 
+    @doc.summary("Delete document(s) from user collection")
+    @doc.consumes(UsernameHeader, location="header", required=True)
+    @doc.consumes(doc.JsonBody(
+        description="Json for filtering data to delete"), location="body",
+        required=True)
     @username_required()
     async def delete(self, request: Request):
         if not request.json:
@@ -59,7 +55,7 @@ class UserDataListView(HTTPMethodView):
                 status=404
             )
 
-        collection = app.db[request.headers["username"]]
+        collection = request.app.db[request.headers["username"]]
         documents_count = await collection.count_documents(request.json)
         if documents_count < 1:
             return json(
@@ -80,9 +76,3 @@ class UserDataListView(HTTPMethodView):
             },
             status=200
         )
-
-
-app.add_route(UserDataListView.as_view(), "/")
-
-if __name__ == '__main__':
-    app.run("0.0.0.0", port=8008)
