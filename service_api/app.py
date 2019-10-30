@@ -11,11 +11,6 @@ api_v1.load_api(app)
 app.blueprint(swagger_blueprint)
 
 
-# @app.middleware('response')
-# async def ensure_headers(request, response):
-#     response.headers["content-type"] = "application/json"
-
-
 @app.listener('before_server_start')
 def init(sanic: Sanic, loop):
     cfg = sanic.config
